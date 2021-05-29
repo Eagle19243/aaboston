@@ -8,16 +8,14 @@ export default class Scraper {
 
 
     async start() {
-        // this.removeFile();
-
+        this.removeFile();
         const data: any[] = await this.scrape();
-        // this.createOutput(data);
-
+        this.createOutput(data);
         console.log('********** completed **********');
     }
 
     private async scrape(): Promise<any[]> {
-        let html = await axios.get('https://aaboston.org/meetings?tsml-day=5');
+        let html = await axios.get('https://aaboston.org/meetings?tsml-day=any');
         let $ = cheerio.load(html.data);
         const meetings = $('#meetings_tbody tr')
             .map((i, x) => {
@@ -63,6 +61,7 @@ export default class Scraper {
     }
 
     private createOutput(data: any[]) {
+        console.log(this.output);
         fs.writeFileSync(this.output, JSON.stringify(data));
     }
 
