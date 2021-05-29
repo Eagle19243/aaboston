@@ -61,7 +61,6 @@ export default class Scraper {
     }
 
     private createOutput(data: any[]) {
-        console.log(this.output);
         fs.writeFileSync(this.output, JSON.stringify(data));
     }
 
