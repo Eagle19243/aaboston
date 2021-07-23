@@ -3,18 +3,21 @@ import * as path from 'path';
 import axios from 'axios';
 import cheerio from 'cheerio';
 
+const weekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
 export default class Scraper {
     private output = path.resolve(__dirname, 'public', 'output.json');
 
 
     async start() {
         this.removeFile();
-        const data: any[] = await this.scrape();
-        this.createOutput(data);
+        const data1: any[] = await this.scrapeAABoston();
+        const data2: any[] = await this.scrapeNerna();
+        this.createOutput([...data1, ...data2]);
         console.log('********** completed **********');
     }
 
-    private async scrape(): Promise<any[]> {
+    private async scrapeAABoston(): Promise<any[]> {
         let html = await axios.get('https://aaboston.org/meetings?tsml-day=any');
         let $ = cheerio.load(html.data);
         const meetings = $('#meetings_tbody tr')
@@ -34,7 +37,6 @@ export default class Scraper {
         for (const meeting of meetings) {
             html = await axios.get(meeting.link);
             $ = cheerio.load(html.data);
-            console.log(meeting.link);
             const datetime = $('.meeting-time').text();
             const types = $('.meeting-types li').map((i, x) => $(x).text().trim()).toArray();
             const type_description = $('.meeting-type-description').text();
@@ -54,6 +56,42 @@ export default class Scraper {
                 last_updated,
                 notes,
                 contact,
+            });
+        }
+
+        return data;
+    }
+
+    private async scrapeNerna(): Promise<any[]> {
+        const url = `https://nerna.org/main_server/client_interface/jsonp/?switcher=GetSearchResults&get_used_formats&lang_enum=en&data_field_key=id_bigint,longitude,latitude,formats,location_postal_code_1,duration_time,start_time,time_zone,weekday_tinyint,location_province,location_municipality,location_street,location_info,location_text,comments,meeting_name,virtual_meeting_additional_info,virtual_meeting_link,phone_meeting_number&services[]=2&recursive=1&sort_keys=start_time`;
+        const response = await axios.get(url);
+        const json = JSON.parse(response.data.substr(1, response.data.length - 3));
+        const meetings: any[] = json.meetings;
+        const formats: any[] = json.formats;
+        const data = [];
+
+        for (const meeting of meetings) {
+            const mFormats: string[] = meeting.formats.split(',');
+            const types = mFormats.map(m => {
+                const format = formats.find(f => {
+                    return f.key_string === m;
+                });
+                return format.name_string;
+            });
+            const type: any = formats.find(f => {
+                return mFormats.length && f.key_string === mFormats[0];
+            });
+
+            data.push({
+                code: meeting.id_bigint,
+                datetime: `${weekday[meeting.weekday_tinyint]}, ${meeting.start_time}`,
+                town: meeting.location_municipality,
+                name: meeting.meeting_name,
+                location: `${meeting.latitude}, ${meeting.longitude}`,
+                address: `${meeting.location_street}, ${meeting.location_municipality}, ${meeting.location_province}, ${meeting.location_postal_code_1}`,
+                types,
+                type_description: type ? type.description_string : '',
+                notes: !!meeting.virtual_meeting_link ? `${meeting.virtual_meeting_link}, ${meeting.virtual_meeting_additional_info}` : '',
             });
         }
 
