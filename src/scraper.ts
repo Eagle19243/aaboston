@@ -13,7 +13,8 @@ export default class Scraper {
         this.removeFile();
         const data1: any[] = await this.scrapeAABoston();
         const data2: any[] = await this.scrapeNerna();
-        this.createOutput([...data1, ...data2]);
+        const data3: any[] = await this.scrapeNa();
+        this.createOutput([...data1, ...data2, ...data3]);
         console.log('********** completed **********');
     }
 
@@ -94,6 +95,37 @@ export default class Scraper {
                 notes: !!meeting.virtual_meeting_link ? `${meeting.virtual_meeting_link}, ${meeting.virtual_meeting_additional_info}` : '',
             });
         }
+
+        return data;
+    }
+
+    private async scrapeNa(): Promise<any[]> {
+        let html = await axios.get('https://www.na.org/meetingsearch/text-results.php?country=USA&state=Massachusetts&city=Boston&zip=&street=&within=20&day=0&lang=&orderby=datetime');
+        let $ = cheerio.load(html.data);
+        const data = $('form[action="email-update.php"]')
+            .map((i, x) => {
+                const code = $(x).find('#hdnGroupId').val().toString();
+                const location = $(x).find('#hdnLocation').val().toString().replace('(VENUE CLOSED)', '').trim();
+                const address = $(x).find('#hdnAddress').val().toString().replace('(VENUE CLOSED)', '').trim();
+                const tmpAry = address.split(' ');
+                const town = tmpAry[tmpAry.indexOf('MA') - 1].replace(',', '');
+                const day = $(x).find('#hdnMtgDay').val().toString();
+                const time = $(x).find('#hdnMtgTime').val().toString();
+                const types = $(x).find('#hdnFormats').val().toString().split(',').map((type) => type.trim());
+                const notes = $(x).find('#hdnRoom').val().toString();
+                return {
+                    code,
+                    datetime: `${day}, ${time}`,
+                    town,
+                    location,
+                    address,
+                    types,
+                    notes,
+                }
+            })
+            .toArray();
+        
+        data.shift();
 
         return data;
     }
