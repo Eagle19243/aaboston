@@ -10,11 +10,12 @@ export default class Scraper {
 
 
     async start() {
-        this.removeFile();
-        const data1: any[] = await this.scrapeAABoston();
+        // this.removeFile();
+        // const data1: any[] = await this.scrapeAABoston();
         const data2: any[] = await this.scrapeNerna();
-        const data3: any[] = await this.scrapeNa();
-        this.createOutput([...data1, ...data2, ...data3]);
+        // const data3: any[] = await this.scrapeNa();
+        // this.createOutput([...data1, ...data2, ...data3]);
+        this.createOutput([...data2]);
         console.log('********** completed **********');
     }
 
@@ -89,7 +90,7 @@ export default class Scraper {
                 town: meeting.location_municipality,
                 name: meeting.meeting_name,
                 location: `${meeting.latitude}, ${meeting.longitude}`,
-                address: `${meeting.location_street}, ${meeting.location_municipality}, ${meeting.location_province}, ${meeting.location_postal_code_1}`,
+                address: `${meeting.location_street}`,
                 types,
                 type_description: type ? type.description_string : '',
                 notes: !!meeting.virtual_meeting_link ? `${meeting.virtual_meeting_link}, ${meeting.virtual_meeting_additional_info}` : '',
