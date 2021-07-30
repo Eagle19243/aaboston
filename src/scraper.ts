@@ -10,12 +10,11 @@ export default class Scraper {
 
 
     async start() {
-        // this.removeFile();
-        // const data1: any[] = await this.scrapeAABoston();
+        this.removeFile();
+        const data1: any[] = await this.scrapeAABoston();
         const data2: any[] = await this.scrapeNerna();
-        // const data3: any[] = await this.scrapeNa();
-        // this.createOutput([...data1, ...data2, ...data3]);
-        this.createOutput([...data2]);
+        const data3: any[] = await this.scrapeNa();
+        this.createOutput([...data1, ...data2, ...data3]);
         console.log('********** completed **********');
     }
 
@@ -103,17 +102,23 @@ export default class Scraper {
     private async scrapeNa(): Promise<any[]> {
         let html = await axios.get('https://www.na.org/meetingsearch/text-results.php?country=USA&state=Massachusetts&city=Boston&zip=&street=&within=20&day=0&lang=&orderby=datetime');
         let $ = cheerio.load(html.data);
-        const data = $('form[action="email-update.php"]')
+        const data = $('.result_table tbody tr')
             .map((i, x) => {
-                const code = $(x).find('#hdnGroupId').val().toString();
-                const location = $(x).find('#hdnLocation').val().toString().replace('(VENUE CLOSED)', '').trim();
-                const address = $(x).find('#hdnAddress').val().toString().replace('(VENUE CLOSED)', '').trim();
-                const tmpAry = address.split(' ');
+                if (i === 0) {
+                    return null;
+                }
+
+                const frm = $(x).find('form[action="email-update.php"]');
+                const code = $(frm).find('#hdnGroupId').val().toString();
+                const location = $(frm).find('#hdnLocation').val().toString().replace('(VENUE CLOSED)', '').trim();
+                const address = $(x).find('td').first().html().split('<br>')[1];
+                const fullAddress = $(frm).find('#hdnAddress').val().toString().replace('(VENUE CLOSED)', '').trim();
+                const tmpAry = fullAddress.split(' ');
                 const town = tmpAry[tmpAry.indexOf('MA') - 1].replace(',', '');
-                const day = $(x).find('#hdnMtgDay').val().toString();
-                const time = $(x).find('#hdnMtgTime').val().toString();
-                const types = $(x).find('#hdnFormats').val().toString().split(',').map((type) => type.trim());
-                const notes = $(x).find('#hdnRoom').val().toString();
+                const day = $(frm).find('#hdnMtgDay').val().toString();
+                const time = $(frm).find('#hdnMtgTime').val().toString();
+                const types = $(frm).find('#hdnFormats').val().toString().split(',').map((type) => type.trim());
+                const notes = $(frm).find('#hdnRoom').val().toString();
                 return {
                     code,
                     datetime: `${day}, ${time}`,
