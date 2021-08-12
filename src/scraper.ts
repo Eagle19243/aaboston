@@ -57,6 +57,7 @@ export default class Scraper {
                 last_updated,
                 notes,
                 contact,
+                source: 'aaboston.org',
             });
         }
 
@@ -93,6 +94,7 @@ export default class Scraper {
                 types,
                 type_description: type ? type.description_string : '',
                 notes: !!meeting.virtual_meeting_link ? `${meeting.virtual_meeting_link}, ${meeting.virtual_meeting_additional_info}` : '',
+                source: 'nerna.org',
             });
         }
 
@@ -127,6 +129,7 @@ export default class Scraper {
                     address,
                     types,
                     notes,
+                    source: 'na.org',
                 }
             })
             .toArray();
