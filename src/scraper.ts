@@ -6,16 +6,38 @@ import cheerio from 'cheerio';
 const weekday = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default class Scraper {
-    private output = path.resolve(__dirname, 'public', 'output.json');
 
-
-    async start() {
-        this.removeFile();
-        const data1: any[] = await this.scrapeAABoston();
-        const data2: any[] = await this.scrapeNerna();
-        const data3: any[] = await this.scrapeNa();
-        this.createOutput([...data1, ...data2, ...data3]);
+    start() {
+        this.startBoston();
+        this.startIndiana();
         console.log('********** completed **********');
+    }
+
+    private async startBoston() {
+        const output = path.resolve(__dirname, 'public', 'output.json');
+
+        try {
+            const data1: any[] = await this.scrapeAABoston();
+            const data2: any[] = await this.scrapeNerna();
+            const data3: any[] = await this.scrapeNa();
+            this.removeFile(output);
+            this.createOutput([...data1, ...data2, ...data3], output);
+        } catch(error) {
+            this.removeFile(output);
+        }
+        
+    }
+
+    private async startIndiana() {
+        const output = path.resolve(__dirname, 'public', 'bhtc.json');
+
+        try {
+            const data: any[] = await this.scrapeIndyaa();
+            this.removeFile(output);
+            this.createOutput([...data], output);
+        } catch(error) {
+            this.removeFile(output);
+        }
     }
 
     private async scrapeAABoston(): Promise<any[]> {
@@ -38,7 +60,7 @@ export default class Scraper {
         for (const meeting of meetings) {
             html = await axios.get(meeting.link);
             $ = cheerio.load(html.data);
-            const datetime = $('.meeting-time').text();
+            const datetime = $('.meeting-time').text().trim();
             const types = $('.meeting-types li').map((i, x) => $(x).text().trim()).toArray();
             const type_description = $('.meeting-type-description').text();
             const last_updated = $('.list-group-item-updated').text().replace('Updated', '').trim();
@@ -139,13 +161,59 @@ export default class Scraper {
         return data;
     }
 
-    private createOutput(data: any[]) {
-        fs.writeFileSync(this.output, JSON.stringify(data));
+    private async scrapeIndyaa(): Promise<any[]> {
+        let html = await axios.get('https://indyaa.org/meetings/?tsml-day=any');
+        let $ = cheerio.load(html.data);
+        const meetings = $('#meetings_tbody tr')
+            .map((i, x) => {
+                return {
+                    link: $(x).find('.name a').attr('href'),
+                    code: $(x).find('.types').text(),
+                    town: $(x).find('.region').text(),
+                    name: $(x).find('.name a').text(),
+                    location: $(x).find('.location').text().trim(),
+                    address: $(x).find('.address').text(),
+                }
+            })
+            .toArray();
+        const data = [];
+
+        for (const meeting of meetings) {
+            html = await axios.get(meeting.link);
+            $ = cheerio.load(html.data);
+            const datetime = $('.meeting-time').text().trim();
+            const types = $('.meeting-types li').map((i, x) => $(x).text().trim()).toArray();
+            const type_description = $('.meeting-type-description').text();
+            const last_updated = $('.list-group-item-updated').text().replace('Updated', '').trim();
+            const notes = $('.meeting-notes').text();
+            const contact = $('.list-group-item-group a').map((i, x) => $(x).attr('href').replace('mailto:', '')).toArray();
+            
+            data.push({
+                code: meeting.code,
+                datetime,
+                town: meeting.town,
+                name: meeting.name,
+                location: meeting.location,
+                address: meeting.address,
+                types,
+                type_description,
+                last_updated,
+                notes,
+                contact,
+                source: 'indyaa.org',
+            });
+        }
+
+        return data;
     }
 
-    private removeFile() {
-        if (fs.existsSync(this.output)) {
-            fs.unlinkSync(this.output);
+    private createOutput(data: any[], output: string) {
+        fs.writeFileSync(output, JSON.stringify(data));
+    }
+
+    private removeFile(path: string) {
+        if (fs.existsSync(path)) {
+            fs.unlinkSync(path);
         }
     }
 
