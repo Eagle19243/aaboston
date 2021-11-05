@@ -180,17 +180,25 @@ export default class Scraper {
         for (const meeting of meetings) {
             html = await axios.get(meeting.link);
             $ = cheerio.load(html.data);
+
             const datetime = $('.meeting-time').text().trim();
             const types = $('.meeting-types li').map((i, x) => $(x).text().trim()).toArray();
             const type_description = $('.meeting-type-description').text();
             const last_updated = $('.list-group-item-updated').text().replace('Updated', '').trim();
             const notes = $('.meeting-notes').text();
             const contact = $('.list-group-item-group a').map((i, x) => $(x).attr('href').replace('mailto:', '')).toArray();
-            const address = $('.location-address').html().split('<br>');
-            const tmp = address[1].split(' ');
-            const city = tmp[0].replace(',', '');
-            const state = tmp[1];
-            const zip = tmp[2];
+            const address = $('.location-address').html();
+
+            let city = '';
+            let state = '';
+            let zip = '';
+
+            if (address.includes('<br>')) {
+                const tmp = address.split('<br>')[1].split(' ');
+                city = tmp[0].replace(',', '');
+                state = tmp[1];
+                zip = tmp[2];
+            }
             
             data.push({
                 code: meeting.code,
