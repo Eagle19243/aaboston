@@ -10,7 +10,6 @@ export default class Scraper {
     start() {
         this.startBoston();
         this.startIndiana();
-        console.log('********** completed **********');
     }
 
     private async startBoston() {
@@ -187,14 +186,22 @@ export default class Scraper {
             const last_updated = $('.list-group-item-updated').text().replace('Updated', '').trim();
             const notes = $('.meeting-notes').text();
             const contact = $('.list-group-item-group a').map((i, x) => $(x).attr('href').replace('mailto:', '')).toArray();
+            const address = $('.location-address').html().split('<br>');
+            const tmp = address[1].split(' ');
+            const city = tmp[0].replace(',', '');
+            const state = tmp[1];
+            const zip = tmp[2];
             
             data.push({
                 code: meeting.code,
                 datetime,
-                town: meeting.town,
                 name: meeting.name,
                 location: meeting.location,
+                town: meeting.town,
                 address: meeting.address,
+                city,
+                state,
+                zip,
                 types,
                 type_description,
                 last_updated,
